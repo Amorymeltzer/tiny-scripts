@@ -1,4 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# cask-repair by @vitorgalvao
+# https://github.com/vitorgalvao/tiny-scripts/blob/master/cask-repair
+# Modified by @Amorymeltzer
 
 readonly program="$(basename "${0}")"
 export readonly MACOS_VERSION='10.12' # Latest macOS version, so commands like `fetch` are not dependent on the contributor’s OS
@@ -461,10 +464,16 @@ for cask in "${@}"; do
 
     [[ "${cask_url}" =~ (github.com|bitbucket.org) ]] && cask_url_status='200' # If the download URL is from github or bitbucket, fake the status code
 
+<<<<<<< HEAD
     if [[ "${cask_url_status}" != '200' ]]; then
       [[ -z "${cask_url_status}" ]] && add_warning warning 'you need to use a valid URL' || add_warning warning "url is probably incorrect, as a non-200 (OK) HTTP response code was returned (${cask_url_status})"
     fi
   fi
+=======
+  audit_message=$(brew cask audit --download "${cask_file}" 2>/dev/null)
+  audit_result="$?"
+  [[ "${audit_result}" -ne 0 ]] && add_warning error "${audit_message}"
+>>>>>>> Don't need so many updates now
 
   [[ "${edit_on_start}" == 'true' ]] && edit_cask "${cask_file}"
 
@@ -546,6 +555,7 @@ for cask in "${@}"; do
 
   [[ -z "${issue_to_close}" ]] && pr_link=$(hub pull-request -b "${submit_pr_to}" -h "${submit_pr_from}" -m "${hub_message}") || pr_link=$(hub pull-request -b "${submit_pr_to}" -h "${submit_pr_from}" -m "$(echo -e "${hub_message}\n\n---\n\nCloses #${issue_to_close}.")")
 
+<<<<<<< HEAD
   if [[ -n "${pr_link}" ]]; then
     if [[ -n "${install_now}" ]]; then
       success_message 'Updating cask locally…'
@@ -560,3 +570,15 @@ for cask in "${@}"; do
     abort 'There was an error submitting the pull request. Please open a bug report on the repo for this script (https://github.com/vitorgalvao/tiny-scripts).'
   fi
 done
+=======
+# commit, push, submit pull request, clean
+readonly commit_message="Update ${cask_name} to v${cask_version}"
+readonly hub_message="$(echo -e "${commit_message}\n\nAfter making all changes to the cask:\n\n- [x] \`brew cask audit --download {{cask_file}}\` is error-free.\n- [x] \`brew cask style --fix {{cask_file}}\` left no offenses.\n- [x] The commit message includes the cask’s name and version.")"
+
+git commit "${cask_file}" --message "${commit_message}" --quiet
+git push --force "${remote_push}" "${cask_branch}" --quiet
+git branch --set-upstream-to "${remote_push}/${cask_branch}" --quiet # needed as workaround for hub to work with certain .gitconfig options to push default: https://github.com/github/hub/issues/789#issuecomment-72553866; after that issue is fixed, this line may likely be completely removed
+[[ -z "${issue_to_close}" ]] && pr_link=$(hub pull-request -b "${submit_pr_to}" -h "${remote_push}":"${cask_branch}" -m "${hub_message}") || pr_link=$(hub pull-request -b "${submit_pr_to}" -m "$(echo -e "${hub_message}\n\n---\n\nCloses #${issue_to_close}.")")
+
+[[ -n "${pr_link}" ]] && finish success "${pr_link}" || finish abort 'There was an error submitting the pull request. Have you forked the repo and made sure the pull and push remotes exist?'
+>>>>>>> Don't need so many updates now
